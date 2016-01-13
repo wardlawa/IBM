@@ -2,11 +2,15 @@ print "hello world"
 
 import argparse
 import sys
+import random
+import numpy
+from collections import namedtuple
 
+Individual = namedtuple("Individual", "sex x y")
 
 def main():
     print("#%s" % args)
-#    populations = [generatePopulation()]
+    populations = [generatePopulation()]
 #    for i in range(args.generations):
 #        #check if we need to split the population
 #        if i == args.split_generation:
@@ -54,6 +58,27 @@ we dont need to worry about the random numbers that get drawn during any particu
 If you are writing a test "rands" should be a list of 'random' numbers 
 that is at least as long as the number of random numbers the function would need. Otherwise the test will simply crash. 
 '''
+
+'''
+Generates a random population based on the input values
+'''
+numpy.random.seed(123)
+def generatePopulation(rands = None):
+    population = []
+    sex = numpy.random.binomial(1,0.5,args.population_size)
+    print sex
+    for i in range(args.population_size):
+        population.append(Individual(sex[i], 1, 5))
+#        #put half of the TEs on each haplotype
+#        num_of_tes_haplotype1 = numpy.random.poisson(args.initial_te_number/2)
+#        num_of_tes_haplotype2 = numpy.random.poisson(args.initial_te_number/2)
+#        #assign each TE a position
+#        haplotype1 = sorted(random.sample(range(0,args.genome_size), num_of_tes_haplotype1))
+#        haplotype2 = sorted(random.sample(range(0,args.genome_size), num_of_tes_haplotype2))
+#        #calculate the fitness of this individual and put it into the population
+#        population.append(calculateFitness(Individual(0.0, haplotype1, haplotype2)))
+    print population
+    return population
 
 if __name__ == "__main__":
     args = parseArgs()
