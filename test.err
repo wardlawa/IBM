@@ -1,1 +1,9 @@
-TIME: 0.0:0.0:0.0114169120789
+Traceback (most recent call last):
+  File "IBM.py", line 260, in <module>
+    main()
+  File "IBM.py", line 24, in main
+    newGenerations = pickParents(populations)
+  File "IBM.py", line 117, in pickParents
+    testNum =  numpy.random.choice(len(males),size = 2, replace = False)
+  File "mtrand.pyx", line 1043, in mtrand.RandomState.choice (numpy/random/mtrand/mtrand.c:7776)
+ValueError: Cannot take a larger sample than population when 'replace=False'

@@ -19,10 +19,11 @@ Individual = namedtuple("Individual", "sex y1 y2 x1 x2")
 def main():
     print("#%s" % args)
     populations = generatePopulation()
+    popStats(populations)
     for i in range(args.generations):
         newGenerations = pickParents(populations)
         populations = newGenerations
-#    popStats(populations)
+        popStats(populations)
 #        #check if we need to split the population
 #        if i == args.split_generation:
 #            populations.append(splitPopulation(populations[0]))
@@ -99,7 +100,7 @@ def generatePopulation(rands = None):
 #        haplotype2 = sorted(random.sample(range(0,args.genome_size), num_of_tes_haplotype2))
 #        #calculate the fitness of this individual and put it into the population
 #        population.append(calculateFitness(Individual(0.0, haplotype1, haplotype2)))
-    print population
+#    print population
     return population
 
 def pickParents(population):     
@@ -114,6 +115,7 @@ def pickParents(population):
 #        print "female", i
         numberOfMates = 0
         testNum =  numpy.random.choice(len(males),size = 2, replace = False)
+        ### Need to deal with what happens when there are so few males in the population that this does not work anymore
 #        print "testNum", testNum
         #print "length of testNum", len(testNum)
         for j in range(0, len(testNum)): 
@@ -133,7 +135,7 @@ def pickParents(population):
 #            print "matedMales", matedMales
         for k in range(0, len(matedMales)):
             makeBabies(females[i], matedMales[k], numberOfMates, newGeneration)
-    print "newGeneration", newGeneration
+#    print "newGeneration", newGeneration
     return newGeneration
 
 def matingProb(female, male):
@@ -143,13 +145,9 @@ def matingProb(female, male):
     return phi
 
 def makeBabies(female, male, mates,newPop):
-    mut = numpy.random.uniform(low = 0, high = 1, size = 4)
-    for i in range (0,len(mut))
-        if mut[i] <= args.mutation_host:
-            female
-        else
-    sex = numpy.random.binomial(1,0.5,args.birth_rate)
-    for i in range(args.birth_rate/mates):
+    for l in range(args.birth_rate/mates):
+        sex = numpy.random.binomial(1,0.5,args.birth_rate/mates)
+#        print "sex", sex
         pickChromosome1 = random.uniform(0,1)
         if pickChromosome1 <= 0.5:
             chromosome1 = [female.x1, female.y1]
@@ -160,11 +158,39 @@ def makeBabies(female, male, mates,newPop):
             chromosome2 = [male.x1, male.y1]
         else:
             chromosome2 = [male.x2, male.y2]
-        offspring = Individual(sex[i],chromosome1[1], chromosome2[1], chromosome1[0], chromosome2[0])
+        genotype = chromosome1 + chromosome2
+#        print "genotype", genotype
+#        print "length", len(genotype)
+        mut = numpy.random.uniform(low = 0, high = 1, size = 4)
+#        print "mut", mut
+        for m in range (0,len(mut)):
+            if mut[m] <= args.mutation_host:
+                coinFlip = numpy.random.binomial(1,0.5,1)
+#                print coinFlip
+                if coinFlip == 0:
+                    genotype[m] = genotype[m] + numpy.random.normal(genotype[m],1)
+                else:
+                    genotype[m] = genotype[m] - numpy.random.normal(genotype[m],1) 
+            else:
+                pass
+        offspring = Individual(sex[l],genotype[1], genotype[3], genotype[0], genotype[2])
+#        print "offspring", offspring
         newPop.append(offspring)        
 
-#def popStats(population):
-    
+def popStats(population):
+    yVals = []
+    xVals = []
+    for i in range(0,len(population)):
+        yVals.append(population[i].y1)
+        yVals.append(population[i].y2)
+        xVals.append(population[i].x1)
+        xVals.append(population[i].x2)
+    avgY = numpy.average(yVals)
+    stdY = numpy.std(yVals)
+    avgX = numpy.average(xVals)
+    stdX = numpy.std(xVals)
+    print avgY, stdY, avgX, stdX
+                
 
 def pickParent(population, other_parent = None, rands = None):
     '''
