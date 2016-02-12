@@ -1,4 +1,4 @@
-print "hello world"
+#print "hello world"
 
 import argparse
 import sys
@@ -10,57 +10,52 @@ from collections import namedtuple
 from scipy.stats import truncnorm
 from random import shuffle
 
-testFile = open('test.out','w')
-sys.stdout = testFile
+mySeed = time.time()
+random.seed(mySeed)
+numpy.random.seed(int(mySeed))
 
-testFile2 = open('test.err','w')
-sys.stderr = testFile2
-
-random.seed(time.time())
-
-#Individual = namedtuple("Individual", "sex y1 y2 x1 x2 inf exp")
 #sex == 0 is females, sex == 1 is males, 
 #inf (infected) --> individual is infected with an STD with exploitation rate inf
 #exp (exposed) --> individual has been expposed to an STD with exploitation rate exp this generation, but cannot transmit the disease or suffer disease-induced mortality until next generation when they have become infected 
 
 def main():
-    print("#%s" % args)
-    for rep in range(args.replicates):
-        populations = generatePopulation()
-        global listYTrait 
-        global listXTrait 
-        global listETrait 
-        listYTrait = []
-        listXTrait = []
-        listETrait = []
-        atEq = 0
-        #popStats(populations,0)
-        #####Think carefully about whether we need to report this initiated population
-        for gen in range(args.generations):
-            #print "Generation = ", gen
-            newGenerations = pickParents(populations, gen)
-            shuffle(newGenerations)
-            populations = newGenerations
-            finalStat = popStats(populations,gen,rep)
-            if finalStat == 0:
-                #print "population extinct!"
+    #print("#%s" % args)
+    outfile = open(args.outfile, "w")
+    populations = generatePopulation()
+    global listYTrait
+    global listXTrait
+    global listETrait
+    listYTrait = []
+    listXTrait = []
+    listETrait = []
+    atEq = 0
+    #popStats(populations,0)
+    #####Think carefully about whether we need to report this initiated population
+    for gen in range(args.generations):
+        #print "Generation = ", gen
+        newGenerations = pickParents(populations, gen)
+        shuffle(newGenerations)
+        populations = newGenerations
+        finalStat = popStats(populations,gen)
+        if finalStat == 0:
+            #print "population extinct!"
+            break
+        else:
+            outfile.write(" ".join(map(str, finalStat))+"\n")
+            slidingWindow(finalStat[2], finalStat[4], finalStat[6])
+            #print "lists", listYTrait, listXTrait, listETrait
+            avgYWindow = numpy.average(listYTrait)
+            avgXWindow = numpy.average(listXTrait)
+            avgEWindow = numpy.average(listETrait)
+            stdYWindow = numpy.std(listYTrait)
+            stdXWindow = numpy.std(listXTrait)
+            stdEWindow = numpy.std(listETrait)
+            #print "stds", stdYWindow, stdXWindow, stdEWindow
+            if len(listYTrait) == args.window_length and stdYWindow < 0.001 and stdXWindow < 0.001 and stdEWindow < 0.001:
                 break
             else:
-                print finalStat
-                slidingWindow(finalStat[2], finalStat[4], finalStat[6])
-                #print "lists", listYTrait, listXTrait, listETrait
-                avgYWindow = numpy.average(listYTrait)
-                avgXWindow = numpy.average(listXTrait)
-                avgEWindow = numpy.average(listETrait)
-                stdYWindow = numpy.std(listYTrait)
-                stdXWindow = numpy.std(listXTrait)
-                stdEWindow = numpy.std(listETrait)
-                #print "stds", stdYWindow, stdXWindow, stdEWindow
-                if len(listYTrait) == args.window_length and stdYWindow < 0.001 and stdXWindow < 0.001 and stdEWindow < 0.001:
-                    break
-                else:
-                    pass
-                
+                pass
+    outfile.close()
 #        #check if we need to split the population
 #        if i == args.split_generation:
 #            populations.append(splitPopulation(populations[0]))
@@ -77,8 +72,8 @@ def main():
 #            outputData(stats, population_name=j, generation=i)
 
 def parseArgs():
-    parser = argparse.ArgumentParser(description="Simulates a population who's individuals' fitness depend on their persistence (male) or resistance (female) trait.") 
-    parser.add_argument("-R", "--replicates", default=10, help="The number of replicate simulations to run.", type=int)
+    parser = argparse.ArgumentParser(description="Simulates a population who's individuals' fitness depend on their persistence (male) or resistance (female) trait.")
+    parser.add_argument("-op","--outfile", help="The name of the output file.", type=str)
     parser.add_argument("-N", "--population_size", default=10, help="The population size of the starting population.", type=int)
     parser.add_argument("-K", "--carrying_capacity", default=100, help="The carrying capacity of the population.", type=float)
     parser.add_argument("-G", "--generations", default=10, help="The maximum number of generations to run the simulation.", type=int)
@@ -97,10 +92,11 @@ def parseArgs():
     parser.add_argument("-w", "--tradeoff", default=1, type=int, help="The parameter governing the shape of the tradeoff between transmission and virulence.")
     parser.add_argument("-y", "--male_persistence_trait", default=5.0, type=float, help="The initial male persistence value in the population.")
     parser.add_argument("-x", "--female_resistance_trait", default=1.0, type=float, help="The initial female resistance value in the population.")
-    parser.add_argument("-mhm", "--mutation_host_male", default = 0.0001, type=float, help="The mutation rate of male host traits.") 
+    parser.add_argument("-s", "--sensitivity", default=1.0, type=float, help="The sensitivity of the mating probability to the difference between the male persistence and female resistance trait.")
+    parser.add_argument("-mhm", "--mutation_host_male", default = 0.0001, type=float, help="The mutation rate of male host traits.")
     parser.add_argument("-mhf", "--mutation_host_female", default = 0.0001, type=float, help="The mutation rate of female host traits.")
     parser.add_argument("-mp", "--mutation_parasite", default = 0.0001, type=float, help="The mutation rate of parasite exploitation.")
-    parser.add_argument("-wl", "--window_length", default = 50, type=int, help="The length of the sliding window over which standard deviation is measured to determine if simulation should stop") 
+    parser.add_argument("-wl", "--window_length", default = 50, type=int, help="The length of the sliding window over which standard deviation is measured to determine if simulation should stop")
     parser.add_argument("-t", "--test", action='store_true', help="Use this option to run tests on all methods with doctests.")
     
     args = parser.parse_args()
@@ -139,7 +135,6 @@ class Individual:
 
     def __repr__(self):
         return "Individual(%s, %s, %s, %s, %s, %s, %s)" % (self.sex, self.y1, self.y2, self.x1, self.x2, self.infected, self.exposed)
-
 
 def generatePopulation(rands = None):
     '''
@@ -182,7 +177,7 @@ def generatePopulation(rands = None):
     #print "population", population
     return population
 
-def pickParents(population, generation):     
+def pickParents(population, generation):
     if generation == args.introduce_STD:
         initInf = numpy.random.choice(len(population), 1)
         #print ("initInf %s" % initInf)
@@ -194,12 +189,12 @@ def pickParents(population, generation):
     #print "\t len(females)", len(females)
     #print "\t len(males)", len(males)
     newGeneration = []
-    densityDependence = (1 - (float(len(females)) + float(len(males)))/args.carrying_capacity) 
+    densityDependence = (1 - (float(len(females)) + float(len(males)))/args.carrying_capacity)
     #print densityDependence
     numberOfEncounters = numpy.random.poisson(args.encounter_rate, len(females))
     if densityDependence < 0:
         fecundity = numpy.zeros((len(females)), dtype = numpy.int)
-    else: 
+    else:
         fecundity = numpy.random.poisson(args.birth_rate*densityDependence, len(females))
  #   print "numberOfEncounters", numberOfEncounters
     #print "density dep term", densityDependence
@@ -217,17 +212,17 @@ def pickParents(population, generation):
 #            if (args.death_rate_females) <= pickDeath:
 #                print "\t continue"
 #                continue
-#            else: 
+#            else:
 #                newGeneration.append(females[i])
-#                print "added to new gen!" 
+#                print "added to new gen!"
         if len(males) == 0:
             encounteredMales = []
-        else: 
+        else:
             encounteredMales = numpy.random.choice(len(males),size = numberOfEncounters[i], replace = True)
         ### Need to deal with what happens when there are so few males in the population that this does not work anymore
 #        print "encounteredMales", encounteredMales
         #print "length of testNum", len(testNum)
-        for j in range(0, len(encounteredMales)): 
+        for j in range(0, len(encounteredMales)):
             test = matingProb(females[i], males[encounteredMales[j]])
             #print "test", test
             randy = random.uniform(0,1)
@@ -238,7 +233,7 @@ def pickParents(population, generation):
                 #numberOfMates.append(1)
 #                print males[testNum[j]]
                 if males[encounteredMales[j]].infected != 0:
-                    if females[i].infected == 0 and females[i].exposed == 0: 
+                    if females[i].infected == 0 and females[i].exposed == 0:
                         pickTransmission = random.uniform(0,1)
                         transmissionProb = ((1 - args.male_resistance)*males[encounteredMales[j]].infected)/(args.tradeoff + ((1 - args.male_resistance)*males[encounteredMales[j]].infected))
                         #print "transmission probability from males to females", transmissionProb
@@ -259,7 +254,7 @@ def pickParents(population, generation):
                     else: pass
                 matedMales.append(males[encounteredMales[j]])
         #print "num of mates", len(matedMales)
-        #print "matedMales", matedMales 
+        #print "matedMales", matedMales
         dads = []
         if len(matedMales) == 0:
             pass
@@ -271,7 +266,7 @@ def pickParents(population, generation):
             #print ("dads %s" % (dads))
             siringSuccess = [dads.count(m) for m in range(len(matedMales))]
             #print (" siringSuccess %s" % (siringSuccess))
-       #siringSuccess prints out a list of how many babies each mated male sires given the fecundity of the female 
+       #siringSuccess prints out a list of how many babies each mated male sires given the fecundity of the female
         #probs = [float(num)/len(numberOfMates) for num in numberOfMates]
         #siringSuccess = numpy.random.multinomial(len(matedMales), probs)
         #print "siringSuccess", siringSuccess
@@ -286,15 +281,15 @@ def pickParents(population, generation):
         pickDeath = random.uniform(0,1)
         #print ("pickDeathFemales %s" % pickDeath)
         #print ("double check number of mates %s" % len(matedMales))
-        if females[i].infected != 0: 
+        if females[i].infected != 0:
             realizedDeathRateFemales = args.death_rate_females + args.cost_harassment*len(matedMales) + (1 - args.female_resistance)*females[i].infected
             #print "Infected female", realizedDeathRateFemales
-        else: 
+        else:
             realizedDeathRateFemales = args.death_rate_females + args.cost_harassment*len(matedMales)
             #print "Uninfected female", realizedDeathRateFemales
         if pickDeath <= (1 - numpy.exp(-realizedDeathRateFemales)):
             continue
-        else: 
+        else:
             newGeneration.append(females[i])
             #print "added to new generation!"
     for m in range(0,len(males)):
@@ -320,11 +315,10 @@ def pickParents(population, generation):
     #print "newGeneration Infected", newGeneration
     return newGeneration
 
-
 def matingProb(female, male):
     resistanceTrait = (female.x1 + female.x2)/2
     persistenceTrait = (male.y1 + male.y2)/2
-    phi = 1/(1 + math.exp(-(persistenceTrait-resistanceTrait)))
+    phi = 1/(1 + math.exp(-args.sensitivity*(persistenceTrait-resistanceTrait)))
     return phi
 
 def makeBabies(female, male, newPop):
@@ -342,14 +336,14 @@ def makeBabies(female, male, newPop):
     for m in range (0,len(mut)):
         if m == 1 or m == 3:
             if mut[m] <= args.mutation_host_male:
-                tempGenotype = genotype[m] + numpy.random.normal(0, std)
+                tempGenotype = max(0, genotype[m] + numpy.random.normal(0, std))
                 genotype[m] = tempGenotype
                 #####Ask Robert if we can just set genotype[m] = truncnorm.rvs etc#######
             else:
                 pass
         elif m == 0 or m == 2:
             if mut[m] <= args.mutation_host_female:
-                tempGenotype = genotype[m] + numpy.random.normal(0,std)
+                tempGenotype = max(0, genotype[m] + numpy.random.normal(0,std))
                 genotype[m] = tempGenotype
             else:
                 pass
@@ -357,7 +351,7 @@ def makeBabies(female, male, newPop):
     #all offspring are born uninfected and unexposed
     #print "offspring", offspring
     newPop.append(offspring)
-    return newPop        
+    return newPop
 
 def chooseAlleles(ind):
     pickX = random.uniform(0,1)
@@ -377,7 +371,7 @@ def chooseAlleles(ind):
             offspringY1 = ind.y2
     return [offspringX1, offspringY1]
 
-def popStats(population, generation, replicate):
+def popStats(population, generation):
     yVals = []
     xVals = []
     parasite = []
@@ -386,7 +380,7 @@ def popStats(population, generation, replicate):
         yVals.append(population[i].y2)
         xVals.append(population[i].x1)
         xVals.append(population[i].x2)
-        if population[i].infected != 0 or population[i].exposed != 0:            
+        if population[i].infected != 0 or population[i].exposed != 0:
             parasite.append(population[i].infected)
     avgY = numpy.average(yVals)
     stdY = numpy.std(yVals)
@@ -405,11 +399,11 @@ def popStats(population, generation, replicate):
     femaleInf = [ind for ind in population if ind.sex == 0 and ind.infected != 0]
     maleInf = [ind for ind in population if ind.sex == 1 and ind.infected != 0]
 ####Possible way to save time by using this count from pickParents####
-    popSize = (len(maleSus) + len(femaleSus) + len(maleInf) + len(femaleInf))        
+    popSize = (len(maleSus) + len(femaleSus) + len(maleInf) + len(femaleInf))
     if popSize == 0:
         return 0
     else:
-        return [replicate, generation, avgY, stdY, avgX, stdX, avgE, stdE, len(maleSus), len(femaleSus), len(maleInf), len(femaleInf)]
+        return [generation, avgY, stdY, avgX, stdX, avgE, stdE, len(maleSus), len(femaleSus), len(maleInf), len(femaleInf)]
 
 def slidingWindow(averageY, averageX, averageE):
     if len(listYTrait) < args.window_length:
@@ -425,10 +419,10 @@ def slidingWindow(averageY, averageX, averageE):
         listETrait.append(averageE)
     return listYTrait, listXTrait, listETrait
 
-def pickParent(population, other_parent = None, rands = None): 
+def pickParent(population, other_parent = None, rands = None):
     #this scaling factor helps us deal with negative fitnesses by making all the numbers positive
     scaling_factor = abs(min([individual.fitness for individual in population])) + 0.001
-    total_fitness = sum([individual.fitness+scaling_factor for individual in population]) 
+    total_fitness = sum([individual.fitness+scaling_factor for individual in population])
     sorted_population = sorted(population)
     if other_parent: sorted_population.remove(other_parent)
     cummulative_fitness = 0.0
@@ -450,9 +444,10 @@ if __name__ == "__main__":
         m, s = divmod(end-start, 60)
         h, m = divmod(m, 60)
         sys.stderr.write("TIME: %s:%s:%s\n" % (h,m,s))
+	import sexualConflictDatabaseHandler
+	sexualConflictDatabaseHandler.setup()
+	sexualConflictDatabaseHandler.addData(mySeed, args)
     else:
         import doctest
         doctest.testmod()
 
-testFile.close()
-testFile2.close()
