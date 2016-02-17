@@ -33,7 +33,7 @@ def main():
     #####Think carefully about whether we need to report this initiated population
     for gen in range(args.generations):
         #print "Generation = ", gen
-        newGenerations = pickParents(populations, gen)
+        newGenerations = pickParents(populations, gen, outfile)
         shuffle(newGenerations)
         populations = newGenerations
         finalStat = popStats(populations,gen)
@@ -55,6 +55,7 @@ def main():
                 break
             else:
                 pass
+    outfile.write("All Done!")
     outfile.close()
 #        #check if we need to split the population
 #        if i == args.split_generation:
@@ -74,6 +75,7 @@ def main():
 def parseArgs():
     parser = argparse.ArgumentParser(description="Simulates a population who's individuals' fitness depend on their persistence (male) or resistance (female) trait.")
     parser.add_argument("-op","--outfile", help="The name of the output file.", type=str)
+    parser.add_argument("-db","--databaseName", default = "", help="The name of the database used in sexualConflictDatabaseHandler.py.", type=str)
     parser.add_argument("-N", "--population_size", default=10, help="The population size of the starting population.", type=int)
     parser.add_argument("-K", "--carrying_capacity", default=100, help="The carrying capacity of the population.", type=float)
     parser.add_argument("-G", "--generations", default=10, help="The maximum number of generations to run the simulation.", type=int)
@@ -177,7 +179,7 @@ def generatePopulation(rands = None):
     #print "population", population
     return population
 
-def pickParents(population, generation):
+def pickParents(population, generation, outputFile):
     if generation == args.introduce_STD:
         initInf = numpy.random.choice(len(population), 1)
         #print ("initInf %s" % initInf)
@@ -201,7 +203,8 @@ def pickParents(population, generation):
     #print "fecundity", fecundity
     #print ("len(females) %s" % len(females))
     for i in range(0, len(females)):
-        #print "\t female ", i
+        #outputFile.write("test"+"\n")
+        outputFile.write(" ".join(map(str, (females[i].x1, females[i].x2)))+"\n")
         matedMales = []
         #matedMales keeps track of which males an individual female successfully mated with and needs to be cleared for each female
 #        print "numberOfMates", numberOfMates
@@ -280,13 +283,13 @@ def pickParents(population, generation):
                 makeBabies(females[i], matedMales[k],newGeneration)
         pickDeath = random.uniform(0,1)
         #print ("pickDeathFemales %s" % pickDeath)
-        #print ("double check number of mates %s" % len(matedMales))
+        outputFile.write("double check number of mates %s \n" % len(matedMales))
         if females[i].infected != 0:
             realizedDeathRateFemales = args.death_rate_females + args.cost_harassment*len(matedMales) + (1 - args.female_resistance)*females[i].infected
             #print "Infected female", realizedDeathRateFemales
         else:
             realizedDeathRateFemales = args.death_rate_females + args.cost_harassment*len(matedMales)
-            #print "Uninfected female", realizedDeathRateFemales
+            outputFile.write("\t Uninfected female %s \n" % realizedDeathRateFemales)
         if pickDeath <= (1 - numpy.exp(-realizedDeathRateFemales)):
             continue
         else:
@@ -331,7 +334,7 @@ def makeBabies(female, male, newPop):
 #    print "length", len(genotype)
     mut = numpy.random.uniform(low = 0, high = 1, size = 4)
 #    print "mut", mut
-    std = 0.3
+    std = 0.1
         ###Maybe could use popStats to give current standard deviation and use that???$######
     for m in range (0,len(mut)):
         if m == 1 or m == 3:
@@ -444,9 +447,9 @@ if __name__ == "__main__":
         m, s = divmod(end-start, 60)
         h, m = divmod(m, 60)
         sys.stderr.write("TIME: %s:%s:%s\n" % (h,m,s))
-	import sexualConflictDatabaseHandler
-	sexualConflictDatabaseHandler.setup()
-	sexualConflictDatabaseHandler.addData(mySeed, args)
+        import sexualConflictDatabaseHandler
+        sexualConflictDatabaseHandler.setup(args)
+        sexualConflictDatabaseHandler.addData(mySeed, args)
     else:
         import doctest
         doctest.testmod()
